@@ -4,8 +4,8 @@ chrome.runtime.onInstalled.addListener(function() {
   
   // Create a repeating alarm that goes off every 15 minutes
   chrome.alarms.create('activityReminder', {
-    delayInMinutes: 15,
-    periodInMinutes: 15
+    delayInMinutes: 1,
+    periodInMinutes: 1
   });
   
   console.log('15-minute timer started');
@@ -19,8 +19,16 @@ chrome.alarms.onAlarm.addListener(function(alarm) {
     // Set a badge on the extension icon to get user's attention
     chrome.action.setBadgeText({ text: '!' });
     chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
+  
     
+    chrome.notifications.onClicked.addListener(function(notificationID) {
+      console.log('Notification Clicked');
+      chrome.tabs.create( {
+        url: chrome.runtime.getURL('popup.html')
+      })
+    });
     // Show a notification (optional - requires 'notifications' permission)
+
     chrome.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',
