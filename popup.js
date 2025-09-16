@@ -1,22 +1,14 @@
 function App() {
-//We are going to run the function App that contains no parameters
-
   const [savedActivity, setSavedActivity] = React.useState(null);
   const [activityHistory, setActivityHistory] = React.useState([]);
-  //First we set up two state variables for use effect, the first for making the buttons that have a default state of nul 
-  //and second for creating an activity history
-  //Both have a state variable and a changer 
-
+  
   React.useEffect(function() {
-    // then we need to load this in. this will run on mount but will not have result so it will not actually run the function. 
-    //Once the useState array get's it's first item through this string literal array. (['lastActivity'] (I assume this is making a new item, the function will check for The parameter 'results', then if the lastActivity exists use setSavedActivity to put the acitivty into the array)
     chrome.storage.local.get(['lastActivity'], function(result) {
       if (result.lastActivity) {
         setSavedActivity(result.lastActivity);
       }
     });
     
-    // Load the full activity history, this is going to get the activity from the activity history array. Using the .get method that chrome provides
     chrome.storage.local.get(['activityHistory'], function(result) {
       if (result.activityHistory) {
         setActivityHistory(result.activityHistory);
@@ -24,6 +16,36 @@ function App() {
     });
   }, []);
   
+  function calculateSummary(activityHistory) {
+    if (activityHistory.length === 0) return [];  // Fixed: acitivityHistory → activityHistory
+
+    const counts = {};
+    activityHistory.forEach(function(activity) {  // Fixed: foreach → forEach
+      if (counts[activity.name]) {
+        counts[activity.name] = counts[activity.name] + 1;
+      } else { 
+        counts[activity.name] = 1; 
+      }
+    });
+
+    const total = activityHistory.length;
+    const summary = [];
+
+    for (const activityName in counts) {
+      const count = counts[activityName];
+      const percentage = Math.round((count / total) * 100);
+      const hours = (count * 15) / 60;
+      
+      summary.push({
+        name: activityName,
+        count: count,
+        percentage: percentage,
+        hours: hours.toFixed(1)
+      });
+    }
+
+    return summary;
+  }
 
   function handleActivityClick(activityName) {
     const activity = {
@@ -32,23 +54,18 @@ function App() {
       date: new Date().toLocaleDateString(),
       timestamp: new Date().getTime()
     };
-    //Create a func handleActivityClick that rquires activityName
-    // for the variable activity save the data in this particilar set of key value pairs
-    // Save as last activity
+
     chrome.storage.local.set({ lastActivity: activity }, function() {
       console.log('Last activity saved:', activityName);
       setSavedActivity(activity);
     });
-    // set the last activity to activity then log last activity saved as activity name
-    //then use setsavedactivity to set actvitiy 
-    // Add to history array
+
     const updatedHistory = [...activityHistory, activity];
     chrome.storage.local.set({ activityHistory: updatedHistory }, function() {
       console.log('Activity history updated');
       setActivityHistory(updatedHistory);
     });
   }
-  //spreads activity history, into multiple entries, then sets 
   
   function clearHistory() {
     chrome.storage.local.set({ activityHistory: [] }, function() {
@@ -56,6 +73,9 @@ function App() {
       setActivityHistory([]);
     });
   }
+  
+  // Calculate summary inside the component
+  const summary = calculateSummary(activityHistory);
   
   return React.createElement('div', null,
     React.createElement('h2', null, 'Time Tracker'),
@@ -118,6 +138,26 @@ function App() {
               style: { fontSize: '12px', margin: '5px 0', padding: '8px', backgroundColor: 'white', borderRadius: '3px' } 
             },
               activity.time + ' - ' + activity.name
+            );
+          })
+        )
+      ) :
+      null,  // Fixed: Added missing comma
+
+    // Summary Section  
+    summary.length > 0 ?
+      React.createElement('div', { 
+        style: { marginTop: '20px', padding: '15px', backgroundColor: '#fff3cd', borderRadius: '5px' }
+      },
+        React.createElement('h3', { style: { margin: '0 0 10px 0' } }, 'Today\'s Summary:'),
+        React.createElement('div', null,
+          summary.map(function(item, index) {
+            return React.createElement('div', { 
+              key: index,
+              style: { fontSize: '13px', margin: '5px 0', display: 'flex', justifyContent: 'space-between' }
+            },
+              React.createElement('span', null, item.name + ':'),
+              React.createElement('span', null, item.percentage + '% (' + item.hours + ' hours)')
             );
           })
         )

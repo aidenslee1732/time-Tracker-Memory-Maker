@@ -4,8 +4,8 @@ chrome.runtime.onInstalled.addListener(function() {
   
   // Create a repeating alarm that goes off every 15 minutes
   chrome.alarms.create('activityReminder', {
-    delayInMinutes: 1,
-    periodInMinutes: 1
+    delayInMinutes: 15,
+    periodInMinutes: 15
   });
   
   console.log('15-minute timer started');
@@ -16,29 +16,34 @@ chrome.alarms.onAlarm.addListener(function(alarm) {
   if (alarm.name === 'activityReminder') {
     console.log('Time to log your activity!');
     
-    // Set a badge on the extension icon to get user's attention
-    chrome.action.setBadgeText({ text: '!' });
-    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
-  
-    
-    chrome.notifications.onClicked.addListener(function(notificationID) {
-      console.log('Notification Clicked');
-      chrome.tabs.create( {
-        url: chrome.runtime.getURL('popup.html')
-      })
-    });
-    // Show a notification (optional - requires 'notifications' permission)
-
-    chrome.notifications.create({
+    // Create notification (with ID for tracking)
+    chrome.notifications.create('activity-reminder', {
       type: 'basic',
       iconUrl: 'icon.png',
       title: 'Time Tracker',
       message: 'What have you been doing for the last 15 minutes?'
     });
+    
+    // Set badge
+    chrome.action.setBadgeText({ text: '!' });
+    chrome.action.setBadgeBackgroundColor({ color: '#FF0000' });
   }
 });
 
-// Clear the badge when user opens the popup
+// SEPARATE listener - registered ONCE, handles ALL notification clicks
+chrome.notifications.onClicked.addListener(function(notificationID) {
+  console.log('Notification clicked:', notificationID);
+  
+  // Clear the notification
+  chrome.notifications.clear(notificationID);
+  
+  // Open extension in new tab
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('popup.html')
+  });
+});
+
+// Clear badge when user clicks extension icon
 chrome.action.onClicked.addListener(function() {
   chrome.action.setBadgeText({ text: '' });
 });
